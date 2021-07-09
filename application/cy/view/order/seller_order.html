@@ -1,0 +1,183 @@
+{include file="comm/header"}
+<!-- 正文开始 -->
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-body table-tool-mini full-table">
+            <div class="layui-form toolbar">
+                <div class="layui-form-item">
+                    <div class="layui-inline" style="display: inline-block;margin-bottom: 0;vertical-align: middle;margin-bottom: 10px;width: 8%">
+                        <select name="option" class="form-control input-md">
+                            <option value="order_number" selected="selected">订单编号</option>
+                            <option value="phone">电话</option>
+                        </select>
+                    </div>
+                    <div class="layui-inline">
+                        <input class="layui-input" name="key" placeholder="请输入关键字" autocomplete="off">
+                        <input id="seller_id" name="seller_id" hidden value="{:session('user_id')}"></input>
+                    </div>
+                    <div class="layui-inline">
+                        <button class="layui-btn icon-btn layui-btn-sm" lay-filter="searchOrder" lay-submit>
+                            <i class="layui-icon">&#xe615;</i>搜索
+                        </button>
+<!--                        <button id="addGoods" class="layui-btn icon-btn layui-btn-sm">-->
+<!--                            <i class="layui-icon layui-icon-add-1"></i>增加书籍-->
+<!--                        </button>-->
+                    </div>
+                </div>
+            </div>
+            <table id="table" lay-filter="table"></table>
+        </div>
+    </div>
+</div>
+<script type="text/html" id="barGoods">
+    <a id="sendGoods" class="layui-btn layui-btn-danger layui-btn-xs " lay-event="send">发货</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="edit">修改</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+{include file="comm/footer"}
+<script>
+    layui.use(['layer', 'form', 'table', 'util', 'admin'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var table = layui.table;
+        var util = layui.util;
+        var admin = layui.admin;
+
+        var seller_id = $("#seller_id").val();
+        // 渲染表格
+        var insTb = table.render({
+            elem: '#table',
+            url: '{:url("seller_order")}?seller_id=' + seller_id,
+            even: true,
+            page: true,//开启分页
+            cols: [[
+                // {type: 'checkbox'}
+                // , {type: 'numbers', title: '序号'}
+                // , {field: 'goods_id', title: '序号', align: 'center'}
+                {field: 'order_id', title: '序号', align: 'center'}
+                , {field: 'consignee_name', title: '收货人姓名', align: 'center'}
+                , {field: 'phone', title: '电话', align: 'center'}
+                , {field: 'address', title: '收货地址', align: 'center'}
+                , {field: 'goods_name', title: '书籍名称', align: 'center'}
+                , {field: 'buy_number', title: '购买数量', align: 'center'}
+                , {field: 'pay', title: '支付金额/元', align: 'center'}
+                , {field: 'status', title: '发货状态', align: 'center'}
+                , {field: 'order_status', title: '订单状态', align: 'center'}
+                , {field: 'order_number', title: '订单编号', align: 'center', width: '15%'}
+                , {title: '操作', align: 'center', toolbar: '#barGoods' , width: '15%'}
+            ]]
+        });
+
+        // 搜索
+        form.on('submit(searchOrder)', function (data) {
+            // var search = $("#search").val();
+            insTb.reload({where: data.field}, 'data');
+
+        });
+
+        /* 表格工具条点击事件 */
+        table.on('tool(table)', function (obj) {
+            if (obj.event === 'edit') { // 修改
+                doEdit(obj.data);
+            } else if (obj.event === 'del') { // 删除
+                doDel(obj.data.order_id, obj.data.goods_name);
+            } else if (obj.event === 'send') {  // 购买
+                doSend(obj.data);
+            }
+
+        });
+
+        //店主发货
+        function doSend(data) {
+            // layer.confirm('确认发货吗?', {icon: 3, title:'提示'}, function(index){
+            //     layer.msg('已发货', {icon: 1});
+            //     layer.close(index);
+            //
+            // });
+            let id = 0;
+            if (data) id = data.order_id;
+            //console.log(id);
+
+            layer.confirm('确认发货吗?', {
+                title: '提示',
+                skin: 'layui-layer-admin',
+                shade: .1,
+                icon:3,
+
+            }, function (index) {
+                layer.close(index);
+                layer.load(2);  //加载操作提示
+                // url: "{:url('orderEdit')}?order_id=" + id,    //对应goods.php中的goodsForm方法
+                $.post("{:url('sendStatus')}?order_id="+id, {
+                    order_id: id
+                }, function (res) {
+                    layer.closeAll('loading');
+                    $("#sendGoods").attr("class","layui-btn-disabled").addClass('layui-btn').text('已发货');
+
+                    if (res.code === 1) {
+
+                        // $("#sendGoods").attr("disabled", "false").addClass('layui-btn-disabled').text('已发货');
+
+                        layer.msg(res.msg, {icon: 1});
+                        // insTb.reload('sendGoods',{$("#sendGoods").attr("class","layui-btn-disabled").addClass('layui-btn layui-btn-danger layui-btn-xs').text('已发货');});
+                        insTb.reload();
+
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                }, 'json');
+            });
+        }
+
+        // 修改书籍信息
+        function doEdit(data) {
+            //添加id的目的为防止用户编辑时显示用户密码
+            let id = 0;
+            if (data) id = data.order_id;
+            //console.log(id);
+
+            var layIndex = admin.open({
+                // title: (data ? '修改' : '添加') + '书籍',
+                title: '修改订单',
+                url: "{:url('orderEdit')}?order_id=" + id,    //对应goods.php中的goodsForm方法
+                // url: "{:url('goodsForm')}",
+                data: {data: data},     // 传递数据到表单页面
+                end: function () {
+                    if (admin.getLayerData(layIndex, 'formOk')) {  // 判断表单操作成功标识
+                        insTb.reload();  // 成功刷新表格
+                    }
+                },
+                success: function (layero, dIndex) {
+                    // 弹窗超出范围不出现滚动条
+                    $(layero).children('.layui-layer-content').css('overflow', 'visible');
+                }
+            });
+        }
+
+        /* 删除 */
+        function doDel(id, name) {
+            layer.confirm('确定要删除“' + name + '”吗？', {
+                title: '提示',
+                skin: 'layui-layer-admin',
+                shade: .1,
+                icon:3
+            }, function (index) {
+                layer.close(index);
+                layer.load(2);  //加载操作提示
+                $.post("{:url('orderDel')}", {
+                    order_id: id
+                }, function (res) {
+                    layer.closeAll('loading');
+                    if (res.code === 1) {
+                        layer.msg(res.msg, {icon: 1});
+                        insTb.reload();
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                }, 'json');
+            });
+        }
+
+    });
+</script>

@@ -1,0 +1,75 @@
+<form id="form" lay-filter="form" class="layui-form model-form">
+    <input name="order_id" type="hidden"/>
+    <div class="layui-form-item">
+        <label class="layui-form-label">商品名称</label>
+        <div class="layui-input-block">
+            <input name="goods_name" autocomplete="off" class="layui-input layui-disabled" placeholder="" lay-verType="tips" />
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">购买数量</label>
+        <div class="layui-input-block">
+            <input name="buy_number" autocomplete="off" class="layui-input layui-disabled" placeholder="" lay-verType="tips" />
+        </div>
+    </div>
+
+       <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required" >收货人</label>
+        <div class="layui-input-block">
+            <input name="consignee_name" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">联系电话</label>
+        <div class="layui-input-block">
+            <input name="phone" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">收货地址</label>
+        <div class="layui-input-block">
+            <input name="address" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+    <div class="layui-form-item text-right">
+        <button class="layui-btn layui-btn-primary" type="button" ew-event="closePageDialog">取消</button>
+        <button class="layui-btn" lay-filter="save" lay-submit>保存</button>
+    </div>
+</form>
+
+<script>
+    layui.use(['layer', 'form', 'admin'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var admin = layui.admin;
+
+        var data = admin.getLayerData('#form').data;  // 列表页面传递的数据
+        // 回显数据
+        form.val('form', data);
+        // 表单提交事件
+        form.on('submit(save)', function (data) {
+            layer.load(2);  //加载图标
+            // console.log("1");
+            $.post("{:url('orderEdit')}", data.field, function (res) {
+                layer.closeAll('loading');
+                // console.log("2");
+                if (res.code == 1) {
+                    layer.msg(res.msg, {icon: 1});  //✔添加成功
+                    admin.putLayerData('formOk', true, '#form');  // 设置操作成功的标识
+                    admin.closeDialog('#form');  // 关闭页面层弹窗
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            }, 'json');
+            return false;
+        });
+
+    });
+</script>

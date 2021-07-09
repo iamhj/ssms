@@ -1,0 +1,164 @@
+{include file="comm/header"}
+<!-- 商家所有的商品列表 -->
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-body table-tool-mini full-table">
+            <div class="layui-form toolbar">
+                <div class="layui-form-item">
+                    <div class="layui-inline" style="display: inline-block;margin-bottom: 0;vertical-align: middle;margin-bottom: 10px;width: 8%">
+                        <select name="option" class="form-control input-md">
+                            <option value="goods_name" selected="selected">书籍名称</option>
+                            <option value="type_name">书籍类型</option>
+                        </select>
+                    </div>
+                    <div class="layui-inline">
+                        <input class="layui-input" name="key" placeholder="请输入关键字" autocomplete="off">
+                        <input id="seller_id" hidden name="seller_id" value="{:session('user_id')}"></input>
+                    </div>
+                    <div class="layui-inline">
+                        <button class="layui-btn icon-btn layui-btn-sm" lay-filter="searchUser" lay-submit>
+                            <i class="layui-icon">&#xe615;</i>搜索
+                        </button>
+                        <button id="addGoods" class="layui-btn icon-btn layui-btn-sm">
+                            <i class="layui-icon layui-icon-add-1"></i>增加书籍
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <table id="table" lay-filter="table"></table>
+        </div>
+    </div>
+</div>
+<script type="text/html" id="barGoods">
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="edit">修改</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+{include file="comm/footer"}
+<script>
+    layui.use(['layer', 'form', 'table', 'util', 'admin'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var table = layui.table;
+        var util = layui.util;
+        var admin = layui.admin;
+        var seller_id = $("#seller_id").val();
+        // layer.msg(seller_id);  // 调试：输出当前用户id信息
+        // 渲染表格
+        var insTb = table.render({
+            elem: '#table',
+            // url: '{:url("seller_form")}',
+            url: '{:url("seller_form")}?seller_id=' + seller_id,
+            even: true,
+            page: true,//开启分页
+            cols: [[
+                // {type: 'checkbox'}
+                {type: 'numbers', title: '序号'}
+                // , {field: 'goods_id', title: '序号', align: 'center'}
+                , {field: 'goods_name', title: '书籍名称', align: 'center'}
+                , {field: 'type_name', title: '书籍类型', align: 'center'}
+                , {field: 'price', title: '单价/元', align: 'center'}
+                , {field: 'number', title: '书籍数量', align: 'center'}
+                , {title: '操作', align: 'center', toolbar: '#barGoods'}
+            ]]
+        });
+
+        // 搜索
+        form.on('submit(searchUser)', function (data) {
+            insTb.reload({where: data.field}, 'data');
+            // alert(document.getElementsByName("key").values());
+            // insTb.reload({where: { "goods_name": data.field.goods_name, "goods_type": data.field.goods_type}
+            // insTb.reload({where:{"goods_name": data.field.goods_name, "goods_type": data.field.goods_type}})
+        });
+
+        /* 表格工具条点击事件 */
+        table.on('tool(table)', function (obj) {
+            if (obj.event === 'edit') { // 修改
+                doEdit(obj.data);
+            } else if (obj.event === 'del') { // 删除
+                doDel(obj.data.goods_id, obj.data.goods_name);
+            } else if (obj.event === 'buy') {  // 购买
+                doBuy(obj.data);
+            }
+
+        });
+
+        // 添加商品
+        $('#addGoods').click(function (obj) {
+
+            doEdit(obj.data);
+        });
+
+        //购买商品
+        // $('#buyGoods').click(function () {
+        //     doBuy();
+        // });
+
+        // function doBuy(data) {
+        //     // alert(data.goods_name);
+        //     var layBuy = admin.open({
+        //         title: "填写订单信息"
+        //         , url: "{:url('buyGoods')}"
+        //         , data: {data: data}
+        //         , end: function () {
+        //             if (admin.getLayerData(layBuy, 'formOk')) {  // 判断表单操作成功标识
+        //                 insTb.reload();  // 成功刷新表格
+        //             }
+        //         }
+        //         , success: function (layero, dIndex) {
+        //             // 弹窗超出范围不出现滚动条
+        //             $(layero).children('.layui-layer-content').css('overflow', 'visible');
+        //         }
+        //
+        //     });
+        // }
+
+        // 修改商品信息
+        function doEdit(data) {
+            //添加id的目的为防止用户编辑时显示用户密码
+            let id = 0;
+            if (data) id = data.goods_id;
+            // console.log(seller_id);
+            // layer.msg(seller_id);
+            var layIndex = admin.open({
+                title: (data ? '修改' : '添加') + '商品',
+                url: "{:url('goodsForm')}?goods_id=" + id + '&seller_id =' + seller_id,    //对应goods.php中的goodsForm方法
+                // url: "{:url('goodsForm')}",
+                data: {data: data},     // 传递数据到表单页面
+                end: function () {
+                    if (admin.getLayerData(layIndex, 'formOk')) {  // 判断表单操作成功标识
+                        insTb.reload();  // 成功刷新表格
+                    }
+                },
+                success: function (layero, dIndex) {
+                    // 弹窗超出范围不出现滚动条
+                    $(layero).children('.layui-layer-content').css('overflow', 'visible');
+                }
+            });
+        }
+
+        /* 删除 */
+        function doDel(id, name) {
+            layer.confirm('确定要删除“' + name + '”吗？', {
+                skin: 'layui-layer-admin',
+                shade: .1,
+                icon:3
+            }, function (index) {
+                layer.close(index);
+                layer.load(2);  //加载操作提示
+                $.post("{:url('goodsDel')}", {
+                    goods_id: id
+                }, function (res) {
+                    layer.closeAll('loading');
+                    if (res.code === 1) {
+                        layer.msg(res.msg, {icon: 1});
+                        insTb.reload();
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                }, 'json');
+            });
+        }
+
+    });
+</script>
