@@ -1,0 +1,166 @@
+{include file="comm/header"}
+<!-- 正文开始 -->
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-body table-tool-mini full-table">
+            <div class="layui-form toolbar">
+                <div class="layui-form-item">
+                    <div class="layui-inline" style="display: inline-block;margin-bottom: 0;vertical-align: middle;margin-bottom: 10px;width: 8%">
+                        <select name="option" class="form-control input-md">
+                            <option value="course_name" selected="selected">课程名称</option>
+                            <option value="semester_name">学期</option>
+                        </select>
+                    </div>
+                    <div class="layui-inline">
+                        <input id="key" class="layui-input" name="key" placeholder="请输入课程名/学期" autocomplete="off">
+                        <input id="teacher_id" name="teacher_id" hidden value="{:session('user_id')}"></input>
+                    </div>
+                    <div class="layui-inline">
+                        <button id="search" class="layui-btn icon-btn layui-btn-sm" lay-filter="searchSelect" lay-submit>
+                            <i class="layui-icon">&#xe615;</i>搜索
+                        </button>
+                       <button id="export" class="layui-btn icon-btn layui-btn-sm">
+                           <i class="layui-icon layui-icon-print"></i>导出
+                       </button>
+                    </div>
+                </div>
+            </div>
+            <table id="table" lay-filter="table"></table>
+        </div>
+    </div>
+</div>
+<script type="text/html" id="barCourse">
+<a id="sendCourse" class="layui-btn layui-btn-danger layui-btn-xs " lay-event="edit">修改</a>
+</script>
+ 
+<script type="text/html" id="doScore">
+  {{#  if(d.score_status == '未打分'){ }}
+    <span style="color: #F00;">{{d.score_status}}</span>
+  {{#  } else { }}
+    <span style="color: #00aa00;">{{d.score_status}}</span>
+  {{#  } }}
+</script>
+{include file="comm/footer"}
+<script>
+    layui.use(['layer', 'form', 'table', 'util', 'admin'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var table = layui.table;
+        var util = layui.util;
+        var admin = layui.admin;
+
+        var teacher_id = $("#teacher_id").val();
+        // 渲染表格
+        var insTb = table.render({
+            elem: '#table',
+            url: '{:url("select")}',
+						id: 'exportTable',
+						title: '学生成绩单',
+            even: true,
+            page: true,//开启分页
+            cols: [[
+                // {type: 'checkbox'}
+                // , {type: 'numbers', title: '序号'}
+                // , {field: 'course_id', title: '序号', align: 'center'}
+                {type: 'numbers', title: '序号'}
+								, {field: 'real_name', title: '学生姓名', align: 'center'}
+                , {field: 'course_name', title: '课程名称', align: 'center', width: '18%'}
+                , {field: 'semester_name', title: '学期', align: 'center', width: '15%'}
+                , {field: 'address', title: '上课地址', align: 'center'}
+								, {field: 'time', title: '时间', align: 'center'}
+                , {field: 'credit', title: '学分', align: 'center', width: '8%'}
+								, {field: 'score_status', title: '打分状态', align: 'center', templet: '#doScore'}
+                
+								
+                // , {field: 'teacher_id', title: '教师编号', align: 'center', hide: true}
+								, {field: 'student_id', title: '学生编号', align: 'center', hide: true}
+                
+                , {field: 'total_score', title: '总评分', align: 'center'}
+                , {field: 'status', title: '平时成绩', align: 'center', hide: true}
+                , {field: 'select_status', title: '考试成绩', align: 'center', hide: true}
+								, {field: 'grade_score', title: '等级', align: 'center'}
+                , {title: '操作', align: 'center', toolbar: '#barCourse'}
+            ]],
+						done: function(res, curr, count) {
+							exportData = res.data;
+							// console.log(exportData)
+						}
+        });
+				
+				//监控键盘Enter 回车键按下的动作
+				$("#key").each(function (){
+									 this.onkeydown = function (e) { // 回车提交表单
+											 let theEvent = window.event || e;
+											 let code = theEvent.keyCode || theEvent.which;
+											 if (code == 13) {
+													 $("#search").click(); //这里写你回车按下后你想触发的那个按钮的id是多少
+											 }
+									 }
+				})
+
+        // 搜索
+        form.on('submit(searchSelect)', function (data) {
+            // var search = $("#search").val();
+            insTb.reload({where: data.field}, 'data');
+
+        });
+				
+				// 导出数据
+				$("#export").click(function(){
+							// console.log(exportData)
+							table.exportFile('exportTable', exportData, 'xlsx');
+				})
+
+        /* 表格工具条点击事件 */
+        table.on('tool(table)', function (obj) {
+            if (obj.event === 'edit') { // 修改
+                doEdit(obj.data);
+            } 
+
+        });
+
+        //修改打分状态
+        function doEdit(data) {
+            // layer.confirm('确认开班吗?', {icon: 3, title:'提示'}, function(index){
+            //     layer.msg('已开班', {icon: 1});
+            //     layer.close(index);
+            //
+            // });
+            let id = 0;
+            if (data) id = data.select_id;
+            //console.log(id);
+        
+            layer.confirm('确认修改该课程打分状态吗?', {
+                title: '提示',
+                skin: 'layui-layer-admin',
+                shade: .1,
+                icon:3,
+        
+            }, function (index) {
+                layer.close(index);
+                layer.load(2);  //加载操作提示
+                // url: "{:url('selectEdit')}?select_id=" + id,    //对应course.php中的courseForm方法
+                $.post("{:url('Edit')}?select_id="+id, {
+                    select_id: id
+                }, function (res) {
+                    layer.closeAll('loading');
+                    // $("#sendCourse").attr("class","layui-btn-disabled").addClass('layui-btn').val('已开班');
+        
+                    if (res.code === 1) {
+        
+                        // $("#sendCourse").attr("disabled", "false").addClass('layui-btn-disabled').text('已开班');
+        
+                        layer.msg(res.msg, {icon: 1});
+                        // insTb.reload('sendCourse',{$("#sendCourse").attr("class","layui-btn-disabled").addClass('layui-btn layui-btn-danger layui-btn-xs').text('已开班');});
+                        insTb.reload();
+        
+                    } else {
+                        layer.msg(res.msg, {icon: 2});
+                    }
+                }, 'json');
+            });
+        }
+
+    });
+</script>

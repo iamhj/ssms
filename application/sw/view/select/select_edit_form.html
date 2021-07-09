@@ -1,0 +1,93 @@
+<form id="form" lay-filter="form" class="layui-form model-form">
+    <input name="select_id" type="hidden"/>
+    <div class="layui-form-item">
+        <label class="layui-form-label">课程名称</label>
+        <div class="layui-input-block">
+            <input name="course_name" autocomplete="off" class="layui-input layui-disabled" placeholder="" lay-verType="tips" readonly="readonly"/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label">姓名</label>
+        <div class="layui-input-block">
+            <input name="real_name" autocomplete="off" class="layui-input layui-disabled" placeholder="" lay-verType="tips" readonly="readonly"/>
+        </div>
+    </div>
+
+       <div class="layui-form-item">
+        <label class="layui-form-label" >学号</label>
+        <div class="layui-input-block">
+            <input name="user_name" autocomplete="off" class="layui-input layui-disabled" value="" placeholder="" lay-verType="tips" readonly="readonly"/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">平时成绩</label>
+        <div class="layui-input-block">
+            <input name="normal_score" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">考试成绩</label>
+        <div class="layui-input-block">
+            <input name="test_score" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+		
+<!-- 		<div class="layui-form-item">
+		    <label class="layui-form-label layui-form-required">总评分</label>
+		    <div class="layui-input-block">
+		        <input name="total_score" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+		               required/>
+		    </div>
+		</div> -->
+		
+<!-- 		<div class="layui-form-item">
+		    <label class="layui-form-label layui-form-required">等级</label>
+		    <div class="layui-input-block">
+		        <input name="grade_score" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+		               required/>
+		    </div>
+		</div> -->
+		
+    <div class="layui-form-item text-right">
+        <button class="layui-btn layui-btn-primary" type="button" ew-event="closePageDialog">取消</button>
+        <button class="layui-btn" lay-filter="save" lay-submit>保存</button>
+    </div>
+</form>
+
+<script>
+    layui.use(['layer', 'form', 'admin'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var admin = layui.admin;
+
+        var data = admin.getLayerData('#form').data;  // 列表页面传递的数据
+        // 回显数据
+        form.val('form', data);
+        // 表单提交事件
+				console.log(data);
+        form.on('submit(save)', function (data) {
+            
+						layer.load(2);  //加载图标
+            
+            $.post("{:url('selectEdit')}", data.field, function (res) {
+                layer.closeAll('loading');
+                // console.log("2");
+                if (res.code == 1) {
+                    layer.msg(res.msg, {icon: 1});  //✔添加成功
+                    admin.putLayerData('formOk', true, '#form');  // 设置操作成功的标识
+                    admin.closeDialog('#form');  // 关闭页面层弹窗
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            }, 'json');
+            return false;
+        });
+
+    });
+</script>

@@ -1,0 +1,123 @@
+<form id="form" lay-filter="form" class="layui-form model-form" lay-filter="test">
+    <input name="course_id" type="hidden"/>
+    <input name="user_id" type="hidden"/>
+    <input id="select_number" name="select_number" type="hidden" value="select_id"/>
+    <input id="user_id" name="student_id" value="{:session('user_id')}" hidden>
+    <div class="layui-form-item">
+        <label class="layui-form-label" placeholder="">课程名称</label>
+        <div class="layui-input-block">
+            <input name="course_name" autocomplete="off" class="layui-input layui-disabled" placeholder="" lay-verType="tips" readonly/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label ">剩余库存</label>
+        <div class="layui-input-block">
+            <input id="rest_number" name="rest_number" autocomplete="off" class="layui-input layui-disabled" placeholder="" lay-verType="tips" readonly/>
+        </div>
+    </div>
+
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">选择人数</label>
+        <div class="layui-input-block">
+            <input id="select_number" name="select_number" value="1" autocomplete="off" class="layui-input" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required" >姓名</label>
+        <div class="layui-input-block">
+            <input id="name" name="user_name" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+
+<!--    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">联系电话</label>
+        <div class="layui-input-block">
+            <input id="phone1" name="phone" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div> -->
+
+    <div class="layui-form-item">
+        <label class="layui-form-label layui-form-required">上课地址</label>
+        <div class="layui-input-block">
+            <input id="address1" name="address" autocomplete="off" class="layui-input" value="" placeholder="" lay-verType="tips" lay-verify="required"
+                   required/>
+        </div>
+    </div>
+
+    <div class="layui-form-item text-right">
+        <button class="layui-btn layui-btn-primary" type="button" ew-event="closePageDialog">取消</button>
+        <button class="layui-btn" lay-filter="select" lay-submit>选课</button>
+    </div>
+</form>
+
+<script>
+    layui.use(['layer', 'form', 'admin', 'laydate'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var admin = layui.admin;
+
+        var data = admin.getLayerData('#form').data;  // 列表页面传递的数据
+
+        // var  laydate = layui.laydate;
+        // laydate.render({
+        //     elem: '#date1'
+        //     ,value: selectId,
+        // });
+
+        //获取个人收获地址信息
+        $.get("{:url('userInfo')}?user_id="+$("#user_id").val(), function (res) {
+            $("#name").val(res[0].real_name);
+            // $("#phone1").val(res[0].phone);
+            $("#address1").val(res[0].address);
+        });
+
+        // 回显数据
+        // console.dir(data);
+        // alert(data.field);
+        form.val('form', data);
+        // 表单提交事件
+        form.on('submit(select)', function (data) {
+            layer.load(2);  //加载图标
+            // console.log("1");
+
+            $.post("{:url('selectCourse')}", data.field, function (res) {
+                layer.closeAll('loading');
+                // console.log("2");
+                if (res.code == 1) {
+                    layer.msg(res.msg, {icon: 1});  //✔添加成功
+                    admin.putLayerData('formOk', true, '#form');  // 设置操作成功的标识
+                    admin.closeDialog('#form');  // 关闭页面层弹窗
+                } else {
+                    layer.msg(res.msg, {icon: 2});
+                }
+            }, 'json');
+            return false;
+        });
+
+        // 输入选择人数后，失焦计算总金额
+        $("#select_number").blur(function(){
+            //alert("选择人数失焦！计算总金额");
+
+            var select_number = parseInt($("#select_number").val());
+            var rest_number = parseInt($("#rest_number").val());
+
+            if(select_number > rest_number){
+                layer.msg('选择人数不能超过库存', {
+                    icon: 0,
+                    time: 2000 //2秒关闭（如果不配置，默认是3秒）
+                }, function(){
+                    $("#select_number").val('1');
+                });
+            }
+
+        });
+
+    });
+</script>

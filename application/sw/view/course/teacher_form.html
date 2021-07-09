@@ -1,0 +1,205 @@
+{include file="comm/header"}
+<!-- 教师所有的课程列表 -->
+<div class="layui-fluid">
+    <div class="layui-card">
+        <div class="layui-card-body table-tool-mini full-table">
+            <div class="layui-form toolbar">
+                <div class="layui-form-item">
+                    <!-- <div class="layui-inline" style="display: inline-block;margin-bottom: 0;vertical-align: middle;margin-bottom: 10px;width: 8%">
+                        <select name="option" class="form-control input-md">
+                            <option value="course_name" selected="selected">课程名称</option>
+                            <option value="semester_name">学期</option>
+                        </select>
+                    </div> -->
+                    <div class="layui-inline">
+                        <input id="key" class="layui-input" name="key" placeholder="请输入课程名/学期" autocomplete="off">
+                        <input id="teacher_id" hidden name="teacher_id" value="{:session('user_id')}"></input>
+                    </div>
+                    <div class="layui-inline">
+                        <button id="search" class="layui-btn icon-btn layui-btn-sm" lay-filter="searchUser" lay-submit>
+                            <i class="layui-icon">&#xe615;</i>搜索
+                        </button>
+                        <button id="addCourse" class="layui-btn icon-btn layui-btn-sm">
+                            <i class="layui-icon layui-icon-add-1"></i>增加课程
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <table id="table" lay-filter="table"></table>
+        </div>
+    </div>
+</div>
+<script type="text/html" id="status">
+  {{#  if(d.status === '未开班'){ }}
+    <span style="color: #ff0000;">{{ d.status }}</span>
+  {{#  } else { }}
+    <span style="color: #00a65a;">{{ d.status }}</span>
+  {{#  } }}
+</script>
+<script type="text/html" id="barCourse">
+    <a id="sendCourse" class="layui-btn layui-btn-danger layui-btn-xs " lay-event="send">开班</a>
+    <a class="layui-btn layui-btn-primary layui-btn-xs" lay-event="edit">修改</a>
+    <a class="layui-btn layui-btn-danger layui-btn-xs" lay-event="del">删除</a>
+</script>
+{include file="comm/footer"}
+<script>
+    layui.use(['layer', 'form', 'table', 'util', 'admin'], function () {
+        var $ = layui.jquery;
+        var layer = layui.layer;
+        var form = layui.form;
+        var table = layui.table;
+        var util = layui.util;
+        var admin = layui.admin;
+        var teacher_id = $("#teacher_id").val();
+        // layer.msg(teacher_id);  // 调试：输出当前用户id信息
+        // 渲染表格
+        var insTb = table.render({
+            elem: '#table',
+            // url: '{:url("teacher_form")}',
+            url: '{:url("teacher_form")}?teacher_id=' + teacher_id,
+            even: true,
+            page: true,//开启分页
+            cols: [[
+                // {type: 'checkbox'}
+                { type: 'numbers', title: '序号' }
+                // , {field: 'course_id', title: '序号', align: 'center'}
+                , { field: 'course_name', title: '课程名称', align: 'center', width: '18%' }
+                , { field: 'semester_name', title: '学期', align: 'center', width: '15%' }
+                , { field: 'address', title: '上课地点', align: 'center' }
+                , { field: 'time', title: '时间', align: 'center', width: '10%' }
+                , { field: 'credit', title: '学分', align: 'center' }
+                , { field: 'quantity', title: '容量', align: 'center' }
+                , { field: 'selected_number', title: '已选人数', align: 'center' }
+                , { field: 'rest_number', title: '可选人数', align: 'center' }
+                , { field: 'status', title: '开班状态', align: 'center', templet: '#status' }
+                , { field: 'select_status', title: '选课状态', align: 'center', hide: true }
+                , { title: '操作', align: 'center', toolbar: '#barCourse', width: '15%' }
+            ]]
+        });
+
+        //监控键盘Enter 回车键按下的动作
+        $("#key").each(function () {
+            this.onkeydown = function (e) { // 回车提交表单
+                let theEvent = window.event || e;
+                let code = theEvent.keyCode || theEvent.which;
+                if (code == 13) {
+                    $("#search").click(); //这里写你回车按下后你想触发的那个按钮的id是多少
+                }
+            }
+        })
+
+        // 搜索
+        form.on('submit(searchUser)', function (data) {
+            insTb.reload({ where: data.field }, 'data');
+            // alert(document.getElementsByName("key").values());
+            // insTb.reload({where: { "course_name": data.field.course_name, "semester": data.field.semester}
+            // insTb.reload({where:{"course_name": data.field.course_name, "semester": data.field.semester}})
+        });
+
+        /* 表格工具条点击事件 */
+        table.on('tool(table)', function (obj) {
+            if (obj.event === 'edit') { // 修改
+                doEdit(obj.data);
+            } else if (obj.event === 'del') { // 删除
+                doDel(obj.data.course_id, obj.data.course_name);
+            } else if (obj.event === 'send') {  // 选择
+                doSend(obj.data);
+            }
+
+        });
+
+        // 添加课程
+        $('#addCourse').click(function (obj) {
+
+            doEdit(obj.data);
+        });
+
+
+        //教师开班
+        function doSend(data) {
+            // layer.confirm('确认开班吗?', {icon: 3, title:'提示'}, function(index){
+            //     layer.msg('已开班', {icon: 1});
+            //     layer.close(index);
+            //
+            // });
+            let id = 0;
+            if (data) id = data.course_id;
+            //console.log(id);
+
+            layer.confirm('确认开班吗?', {
+                title: '提示',
+                skin: 'layui-layer-admin',
+                shade: .1,
+                icon: 3,
+
+            }, function (index) {
+                layer.close(index);
+                layer.load(2);  //加载操作提示
+                // url: "{:url('selectEdit')}?select_id=" + id,    //对应course.php中的courseForm方法
+                $.post("{:url('sendStatus')}?course_id=" + id, {
+                    course_id: id
+                }, function (res) {
+                    layer.closeAll('loading');
+                    // $("#sendCourse").attr("class","layui-btn-disabled").addClass('layui-btn').val('已开班');
+
+                    if (res.code === 1) {
+
+                        // $("#sendCourse").attr("disabled", "false").addClass('layui-btn-disabled').text('已开班');
+
+                        layer.msg(res.msg, { icon: 1 });
+                        // insTb.reload('sendCourse',{$("#sendCourse").attr("class","layui-btn-disabled").addClass('layui-btn layui-btn-danger layui-btn-xs').text('已开班');});
+                        insTb.reload();
+
+                    } else {
+                        layer.msg(res.msg, { icon: 2 });
+                    }
+                }, 'json');
+            });
+        }
+        // 添加课程
+        function doEdit(data) {
+            //添加id的目的为防止用户编辑时显示用户密码
+            let id = 0;
+            if (data) id = data.course_id;
+            var layIndex = admin.open({
+                title: (data ? '修改' : '添加') + '课程',
+                url: "{:url('courseForm')}?course_id=" + id + '&teacher_id =' + teacher_id,    //对应course.php中的courseForm方法
+                // url: "{:url('courseForm')}",
+                data: { data: data },     // 传递数据到表单页面
+                end: function () {
+                    if (admin.getLayerData(layIndex, 'formOk')) {  // 判断表单操作成功标识
+                        insTb.reload();  // 成功刷新表格
+                    }
+                },
+                success: function (layero, dIndex) {
+                    // 弹窗超出范围不出现滚动条
+                    $(layero).children('.layui-layer-content').css('overflow', 'visible');
+                }
+            });
+        }
+
+        /* 删除 */
+        function doDel(id, name) {
+            layer.confirm('确定要删除“' + name + '”吗？', {
+                skin: 'layui-layer-admin',
+                shade: .1,
+                icon: 3
+            }, function (index) {
+                layer.close(index);
+                layer.load(2);  //加载操作提示
+                $.post("{:url('courseDel')}", {
+                    course_id: id
+                }, function (res) {
+                    layer.closeAll('loading');
+                    if (res.code === 1) {
+                        layer.msg(res.msg, { icon: 1 });
+                        insTb.reload();
+                    } else {
+                        layer.msg(res.msg, { icon: 2 });
+                    }
+                }, 'json');
+            });
+        }
+
+    });
+</script>
